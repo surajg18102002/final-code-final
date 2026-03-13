@@ -1,0 +1,342 @@
+import azure.functions as func
+import logging
+import json
+
+# Import helper modules from helpers package
+from helpers.servicenow_helper import (
+    fetch_incident_details,
+    parse_incident_details,
+    clean_for_snow,
+    format_work_note_for_snow,
+    update_incident_work_notes
+)
+from helpers.tidal_helper import fetch_job_output
+from helpers.blob_storage_helper import load_knowledge_base, find_similar_tickets
+from helpers.openai_helper import (
+    generate_incident_analysis,
+    generate_general_incident_analysis,
+    generate_incident_summary
+)
+
+app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
+
+# Constant for Tidal-routing check
+TIDAL_REQUESTED_FOR = "CSDT CSDT"
+
+
+# ============================================================
+# HEALTH CHECK — for Azure container warmup
+# ============================================================
+
+@app.route(route="health", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+def health_check(req: func.HttpRequest) -> func.HttpResponse:
+    """Health check endpoint for Azure container warmup"""
+    return func.HttpResponse(
+        json.dumps({"status": "healthy", "message": "Function app is running"}),
+        status_code=200,
+        mimetype="application/json"
+    )
+
+
+# ============================================================
+# SHARED HELPER — full analysis pipeline (no SNOW update)
+# Reused by both find-similar-tickets and process-incident.
+# ============================================================
+
+def _run_analysis_pipeline(incident_number: str) -> dict:
+    """
+    Core analysis pipeline shared by both routes.
+
+    Fetches SNOW data, branches on RequestedFor:
+      - "CSDT CSDT"  -> Tidal fetch + Tidal-focused GPT prompt
+      - anything else -> general incident GPT prompt (ShortDesc + WorkNotes)
+
+    Runs similarity search and GPT analysis.
+    Does NOT update ServiceNow — callers decide whether to do that.
+
+    Args:
+        incident_number: Normalised INC number (e.g. INC1234567)
+
+    Returns:
+        dict: pipeline result with all steps, parsed fields, similar tickets,
+              and final_report. Does NOT include servicenow_update step.
+    """
+    pipeline = {"incident_number": incident_number, "steps": {}}
+
+    # ── 1. Fetch ServiceNow ───────────────────────────────────────────────
+    try:
+        snow_data = fetch_incident_details(incident_number)
+        pipeline["steps"]["servicenow_fetch"] = "success"
+    except Exception as e:
+        pipeline["steps"]["servicenow_fetch"] = f"FAILED: {e}"
+        return pipeline
+
+    # Parse incident details (includes requested_for)
+    parsed_details   = parse_incident_details(snow_data)
+    short_desc       = parsed_details["short_desc"]
+    config_item      = parsed_details["config_item"]
+    work_notes       = parsed_details["work_notes"]
+    assignment_group = parsed_details["assignment_group"]
+    requested_for    = parsed_details["requested_for"]
+    job_name         = parsed_details["job_name"]
+    job_id           = parsed_details["job_id"]
+
+    # Determine incident type based on RequestedFor
+    is_tidal      = requested_for.upper() == TIDAL_REQUESTED_FOR.upper()
+    incident_type = "tidal" if is_tidal else "general"
+
+    pipeline["incident_type"] = incident_type
+    pipeline["parsed"] = {
+        "job_name":      job_name,
+        "job_id":        job_id,
+        "short_desc":    short_desc,
+        "config_item":   config_item,
+        "requested_for": requested_for,
+        "incident_type": incident_type
+    }
+
+    logging.info(
+        f"Incident {incident_number} | RequestedFor='{requested_for}' | type={incident_type}"
+    )
+
+    # ── 2. Tidal fetch (CSDT CSDT only) ──────────────────────────────────
+    tidal_output = ""
+    if is_tidal:
+        if job_id:
+            try:
+                tidal_output, tidal_debug_info = fetch_job_output(job_id)
+                pipeline["steps"]["tidal_fetch"] = "success"
+                pipeline["tidal_debug"] = tidal_debug_info
+            except Exception as e:
+                tidal_output = f"Tidal fetch failed: {e}"
+                pipeline["steps"]["tidal_fetch"] = f"FAILED: {e}"
+                pipeline["tidal_debug"] = {"error": str(e)}
+        else:
+            pipeline["steps"]["tidal_fetch"] = "skipped — no job_id parsed"
+            pipeline["tidal_debug"] = {"reason": "no job_id parsed from short description"}
+    else:
+        pipeline["steps"]["tidal_fetch"] = "skipped — non-Tidal incident"
+        pipeline["tidal_debug"] = {
+            "reason": f"RequestedFor is '{requested_for}', not '{TIDAL_REQUESTED_FOR}'"
+        }
+
+    pipeline["tidal_raw"]    = tidal_output[:2000]
+    pipeline["tidal_length"] = len(tidal_output)
+
+    # ── 3. Similarity search ──────────────────────────────────────────────
+    # Tidal:   config_item = job_name,   query = job + error snippet
+    # General: config_item = short_desc, query = short_desc + config_item + work_notes
+    try:
+        df = load_knowledge_base()
+
+        if is_tidal:
+            search_config_item = job_name
+            error_snippet = (
+                tidal_output[:1000]
+                if tidal_output and 'failed' not in tidal_output.lower()
+                else ''
+            )
+            query_text = f"{job_name} {config_item} Completed Abnormally {short_desc} {error_snippet}"
+        else:
+            search_config_item = short_desc  # ShortDescription as the identifier
+            query_text = f"{short_desc} {config_item} {work_notes[:500]}"
+
+        top_3 = find_similar_tickets(df, search_config_item, query_text, top_n=3)
+        pipeline["steps"]["similarity_search"] = "success"
+        logging.info(f"Found {len(top_3)} similar tickets for '{search_config_item}'")
+    except Exception as e:
+        top_3 = []
+        pipeline["steps"]["similarity_search"] = f"FAILED: {e}"
+        logging.error(f"Similarity search failed: {e}")
+
+    # ── 4. AI summaries for similar incidents ─────────────────────────────
+    if top_3:
+        try:
+            for ticket in top_3:
+                try:
+                    ai_summary = generate_incident_summary(
+                        ticket_number=ticket['ticket_number'],
+                        config_item=ticket['config_item'],
+                        short_description=ticket.get('short_description', ''),
+                        work_notes=ticket.get('work_notes', ''),
+                        resolution_notes=ticket.get('resolution_notes', '')
+                    )
+                    ticket['ai_summary'] = ai_summary
+                    logging.info(
+                        f"Generated summary for {ticket['ticket_number']}: {ai_summary[:80]}..."
+                    )
+                except Exception as summary_error:
+                    logging.warning(
+                        f"Summary failed for {ticket['ticket_number']}: {summary_error}"
+                    )
+                    ticket['ai_summary'] = "Summary generation failed."
+            pipeline["steps"]["ai_summaries"] = "success"
+        except Exception as e:
+            logging.error(f"AI summary generation error: {e}")
+            pipeline["steps"]["ai_summaries"] = f"FAILED: {e}"
+
+    # ── 5. GPT analysis ───────────────────────────────────────────────────
+    try:
+        if is_tidal:
+            logging.info(f"Running Tidal GPT analysis for {incident_number}")
+            final_report = generate_incident_analysis(
+                incident_number=incident_number,
+                short_desc=short_desc,
+                assignment_group=assignment_group,
+                config_item=config_item,
+                job_name=job_name,
+                job_id=job_id,
+                tidal_output=tidal_output,
+                similar_incidents=top_3
+            )
+        else:
+            logging.info(f"Running general GPT analysis for {incident_number}")
+            final_report = generate_general_incident_analysis(
+                incident_number=incident_number,
+                short_desc=short_desc,
+                assignment_group=assignment_group,
+                config_item=config_item,
+                work_notes=work_notes,
+                similar_incidents=top_3
+            )
+
+        pipeline["steps"]["gpt_analysis"] = "success"
+        pipeline["gpt_report_length"] = len(final_report) if final_report else 0
+        logging.info(
+            f"GPT analysis complete. Report length: {len(final_report) if final_report else 0}"
+        )
+    except Exception as e:
+        final_report = f"GPT analysis failed: {e}"
+        pipeline["steps"]["gpt_analysis"] = f"FAILED: {e}"
+        logging.error(f"GPT error: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+
+    pipeline["final_report"]        = final_report
+    pipeline["final_report_length"] = len(final_report) if final_report else 0
+    pipeline["top_3_similar"]       = top_3
+
+    return pipeline
+
+
+# ============================================================
+# ROUTE 1 — find-similar-tickets (full pipeline, NO SNOW update)
+# ============================================================
+
+@app.route(route="find-similar-tickets", methods=["POST", "GET"])
+def find_similar_tickets_http(req: func.HttpRequest) -> func.HttpResponse:
+    """
+    Full analysis pipeline triggered by incident_number.
+    Runs SNOW fetch -> CSDT branch (Tidal or general) -> similarity search
+    -> AI summaries -> GPT analysis.
+    Returns the GPT report WITHOUT updating ServiceNow.
+    """
+    logging.info("find-similar-tickets triggered.")
+
+    incident_number = req.params.get("incident_number", "")
+    if not incident_number:
+        try:
+            body = req.get_json()
+            incident_number = body.get("incident_number", "").strip()
+        except Exception:
+            pass
+
+    incident_number = incident_number.strip().upper()
+
+    if not incident_number:
+        return func.HttpResponse(
+            json.dumps({"error": "incident_number is required"}),
+            status_code=400,
+            mimetype="application/json"
+        )
+    if not incident_number.startswith("INC"):
+        incident_number = "INC" + incident_number
+
+    pipeline = _run_analysis_pipeline(incident_number)
+
+    # Return 500 if SNOW fetch failed
+    if pipeline["steps"].get("servicenow_fetch", "").startswith("FAILED"):
+        return func.HttpResponse(
+            json.dumps(pipeline),
+            status_code=500,
+            mimetype="application/json"
+        )
+
+    return func.HttpResponse(
+        json.dumps(pipeline, indent=2),
+        status_code=200,
+        mimetype="application/json"
+    )
+
+
+# ============================================================
+# ROUTE 2 — process-incident (full pipeline WITH SNOW update)
+# ============================================================
+
+@app.route(route="process-incident", methods=["GET", "POST"])
+def process_incident(req: func.HttpRequest) -> func.HttpResponse:
+    """
+    Full analysis pipeline that also updates ServiceNow work notes.
+    Branches on RequestedFor field:
+      - "CSDT CSDT"  -> Tidal fetch + Tidal-focused GPT report -> SNOW update
+      - anything else -> general incident GPT report (ShortDesc + WorkNotes) -> SNOW update
+    """
+    logging.info("process-incident triggered")
+
+    # ── 1. Get incident number ────────────────────────────────────────────
+    incident_number = (
+        req.params.get("incident_number")
+        or (req.get_json(silent=True) or {}).get("incident_number", "")
+    )
+    incident_number = incident_number.strip().upper()
+    if not incident_number:
+        return func.HttpResponse(
+            json.dumps({"error": "incident_number is required"}),
+            status_code=400,
+            mimetype="application/json"
+        )
+    if not incident_number.startswith("INC"):
+        incident_number = "INC" + incident_number
+
+    # ── 2. Run shared analysis pipeline ──────────────────────────────────
+    pipeline = _run_analysis_pipeline(incident_number)
+
+    # Bail out early if SNOW fetch failed
+    if pipeline["steps"].get("servicenow_fetch", "").startswith("FAILED"):
+        return func.HttpResponse(
+            json.dumps(pipeline),
+            status_code=500,
+            mimetype="application/json"
+        )
+
+    final_report = pipeline.get("final_report", "")
+
+    # ── 3. Update ServiceNow ──────────────────────────────────────────────
+    clean_report = clean_for_snow(final_report)
+
+    if not clean_report or len(clean_report.strip()) < 10:
+        logging.warning(
+            f"Skipping ServiceNow update — report too short "
+            f"(len={len(clean_report) if clean_report else 0})"
+        )
+        pipeline["steps"]["servicenow_update"] = "SKIPPED: Empty or invalid report content"
+        pipeline["snow_update_response"] = {
+            "error": "Report content was empty or too short to update ServiceNow",
+            "report_length": len(clean_report) if clean_report else 0,
+            "reason": "GPT analysis may have failed or returned empty response"
+        }
+    else:
+        try:
+            snow_update_response = update_incident_work_notes(incident_number, clean_report)
+            pipeline["steps"]["servicenow_update"] = "success"
+            pipeline["snow_update_response"] = snow_update_response
+        except Exception as e:
+            pipeline["steps"]["servicenow_update"] = f"FAILED: {e}"
+            pipeline["snow_update_response"] = {"error": str(e)}
+            logging.error(f"ServiceNow update error: {e}")
+
+    return func.HttpResponse(
+        json.dumps(pipeline, indent=2),
+        status_code=200,
+        mimetype="application/json"
+    )
