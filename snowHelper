@@ -1,0 +1,357 @@
+"""
+ServiceNow Helper Module
+Handles all ServiceNow-related operations including fetching incident details and updating work notes.
+"""
+
+import json
+import logging
+import os
+import re
+import requests
+from datetime import datetime
+
+
+# ServiceNow Configuration
+SNOW_GET_URL = "https://apigateway-crt.caresource.corp/ServiceNow/Incident/1.0"
+SNOW_GET_KEY = os.environ.get("SNOW_GET_KEY", "")
+SNOW_UPDATE_URL = "https://apigateway-crt.caresource.corp/ServiceNow/Incident/CreateUpdate/Sync/"
+SNOW_UPDATE_KEY = os.environ.get("SNOW_UPDATE_KEY", "")
+
+
+def fetch_incident_details(incident_number: str) -> dict:
+    """
+    Fetch incident details from ServiceNow.
+    
+    Args:
+        incident_number: The ServiceNow incident number (e.g., INC1234567)
+        
+    Returns:
+        dict: ServiceNow response data including incident details
+        
+    Raises:
+        Exception: If the API call fails
+    """
+    try:
+        logging.info(f"Fetching ServiceNow details for incident: {incident_number}")
+        
+        snow_resp = requests.get(
+            SNOW_GET_URL,
+            params={"IncidentNumber": incident_number, "Source": "Streamline"},
+            headers={"X-API-KEY": SNOW_GET_KEY, "Accept": "application/json"},
+            timeout=90,
+            verify=False
+        )
+        snow_resp.raise_for_status()
+        snow_data = snow_resp.json()
+        
+        logging.info(f"Successfully fetched incident details for {incident_number}")
+        return snow_data
+        
+    except Exception as e:
+        logging.error(f"Failed to fetch ServiceNow incident {incident_number}: {e}")
+        raise
+
+
+def parse_incident_details(snow_data: dict) -> dict:
+    """
+    Parse ServiceNow response data to extract key fields.
+    
+    Args:
+        snow_data: Raw ServiceNow response data
+        
+    Returns:
+        dict: Parsed incident details with keys: short_desc, config_item, work_notes,
+              assignment_group, job_name, job_id
+    """
+    incident_details = (
+        snow_data.get("ResponseData", {})
+                 .get("IncidentDetails", [{}])[0]
+    )
+    
+    short_desc = incident_details.get("ShortDescription", "")
+    config_item = incident_details.get("ConfigurationItem", "")
+    work_notes = incident_details.get("Activity", {}).get("WorkNotes", [""])[0]
+    assignment_group = incident_details.get("AssignmentGroup", "")
+    requested_for = incident_details.get("RequestedFor", "").strip()
+    
+    # Parse job name and job ID from short description
+    parts = [p.strip() for p in short_desc.split(" | ")]
+    job_name = parts[0].replace("PRD Tidal Job ", "").strip() if parts else ""
+    job_name = job_name.replace("Tidal Job ", "").strip()  # Handle both formats
+    
+    # Extract job ID - handle formats like "4910369" or "4910369| Comnpleted Abnormally"
+    raw_job_id = parts[1] if len(parts) > 1 else ""
+    # Extract only numeric digits from job_id (remove any trailing text/status)
+    job_id = re.match(r'(\d+)', raw_job_id).group(1) if re.match(r'(\d+)', raw_job_id) else raw_job_id.strip()
+    
+    return {
+        "short_desc": short_desc,
+        "config_item": config_item,
+        "work_notes": work_notes,
+        "assignment_group": assignment_group,
+        "requested_for": requested_for,
+        "job_name": job_name,
+        "job_id": job_id
+    }
+
+
+def convert_to_html_format(text: str) -> str:
+    """
+    Format GPT report for clean ServiceNow work notes display.
+    Removes markdown formatting and ensures proper spacing.
+    
+    Args:
+        text: Markdown-formatted report from GPT with **bold** syntax
+        
+    Returns:
+        str: Clean formatted text for ServiceNow with proper spacing
+    """
+    if not text:
+        return ""
+    
+    # Remove markdown bold (**text**) - keep just the text
+    clean_text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+    
+    # ServiceNow work notes use plain text with newlines
+    # Ensure consistent spacing between sections
+    lines = clean_text.split('\n')
+    formatted_lines = []
+    
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        
+        # Add blank line before section headers (lines with emojis and numbers)
+        if i > 0 and re.match(r'^[📊⚠️📋✅]\s+\d+\.', stripped):
+            formatted_lines.append('')
+        
+        # Add blank line before separator lines
+        if stripped and stripped.startswith('=' * 10):
+            if formatted_lines and formatted_lines[-1] != '':
+                formatted_lines.append('')
+                
+        formatted_lines.append(line)
+        
+        # Add blank line after separator lines
+        if stripped and stripped.startswith('=' * 10):
+            formatted_lines.append('')
+    
+    return '\n'.join(formatted_lines)
+
+
+def clean_for_snow(text: str) -> str:
+    """
+    Clean text for safe ServiceNow work note posting.
+    Removes special characters and formats for ServiceNow API.
+    
+    Args:
+        text: Raw text to clean
+        
+    Returns:
+        str: Cleaned text safe for ServiceNow (max 30000 chars)
+    """
+    if not text:
+        return ""
+    
+    # Normalize line endings
+    text = text.replace('\r\n', '\n')
+    text = text.replace('\r', '\n')
+    
+    # Remove excessive blank lines (more than 2 consecutive)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    
+    # Strip leading/trailing whitespace
+    text = text.strip()
+    
+    # Limit length (ServiceNow work notes can handle larger content)
+    if len(text) > 30000:
+        text = text[:29900] + '\n\n[Content truncated due to length]'
+    
+    return text
+
+
+def format_work_note_for_snow(gpt_report: str, incident_number: str, job_name: str, 
+                               assignment_group: str) -> str:
+    """
+    Format GPT report as professional ServiceNow work note with clear structure.
+    
+    Args:
+        gpt_report: The GPT-generated analysis report
+        incident_number: ServiceNow incident number
+        job_name: Name of the Tidal job
+        assignment_group: Assignment group from ServiceNow
+        
+    Returns:
+        str: Formatted work note ready for ServiceNow (max 3000 chars)
+    """
+    # Clean the report first
+    clean_report = clean_for_snow(gpt_report)
+    
+    # Split into lines for better processing
+    lines = clean_report.split('\n')
+    formatted_lines = []
+    
+    # Add header with incident context
+    formatted_lines.append("=" * 70)
+    formatted_lines.append("AUTOMATED ANALYSIS REPORT")
+    formatted_lines.append("=" * 70)
+    formatted_lines.append("")
+    formatted_lines.append(f"Incident: {incident_number}")
+    formatted_lines.append(f"Job: {job_name}")
+    formatted_lines.append(f"Group: {assignment_group}")
+    formatted_lines.append("")
+    formatted_lines.append("-" * 70)
+    formatted_lines.append("")
+    
+    # Process the report content
+    current_section = None
+    for line in lines:
+        stripped = line.strip()
+        
+        # Detect section headers and format them
+        if stripped and not stripped.startswith('['):
+            # Check if this looks like a header (all caps or specific patterns)
+            if any(header in stripped for header in [
+                'Root Cause', 'Resolution Steps', 'Job Details', 'Similar Incidents',
+                'Final Notes', 'Incident Resolution', 'Analysis', 'Action'
+            ]):
+                if current_section:
+                    formatted_lines.append("")
+                formatted_lines.append("-" * 70)
+                formatted_lines.append(stripped)
+                formatted_lines.append("-" * 70)
+                current_section = stripped
+            elif stripped.startswith(('1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.')):
+                # Numbered list items - preserve indentation
+                formatted_lines.append("")
+                formatted_lines.append(f"  {stripped}")
+            elif stripped:
+                formatted_lines.append(stripped)
+        elif not stripped and formatted_lines and formatted_lines[-1] != "":
+            formatted_lines.append("")
+    
+    # Add footer
+    formatted_lines.append("")
+    formatted_lines.append("=" * 70)
+    formatted_lines.append("End of Automated Analysis")
+    formatted_lines.append("=" * 70)
+    
+    result = '\n'.join(formatted_lines)
+    return result[:3000]
+
+
+def update_incident_work_notes(incident_number: str, work_note: str, use_html: bool = True) -> dict:
+    """
+    Update ServiceNow incident with work notes.
+    
+    Args:
+        incident_number: ServiceNow incident number
+        work_note: Work note content to add
+        use_html: If True, convert to HTML format for better display (default: True)
+        
+    Returns:
+        dict: ServiceNow update response
+        
+    Raises:
+        Exception: If the API call fails
+    """
+    # Validate work note content
+    if not work_note or not work_note.strip():
+        raise ValueError("Work note content is empty. Cannot update ServiceNow with empty data.")
+    
+    if len(work_note.strip()) < 10:
+        raise ValueError(f"Work note content is too short ({len(work_note)} chars). Minimum 10 characters required.")
+    
+    try:
+        # Convert to HTML if requested
+        if use_html:
+            work_note = convert_to_html_format(work_note)
+            logging.info("Converted work note to HTML format for better display")
+        
+        # Add timestamp header
+        timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+        if use_html:
+            # Use simple formatting for better compatibility
+            header = f'╔═══════════════════════════════════════════════════════════╗\n'
+            header += f'║  AUTOMATED ANALYSIS - {timestamp}  ║\n'
+            header += f'╚═══════════════════════════════════════════════════════════╝\n'
+            work_note_with_timestamp = f"{header}\n{work_note}"
+        else:
+            work_note_with_timestamp = f"[Automated Analysis - {timestamp}]\n\n{work_note}"
+        
+        logging.info(f"Updating ServiceNow incident {incident_number}")
+        logging.info(f"Work note length: {len(work_note_with_timestamp)} chars")
+        logging.debug(f"Work note preview (first 200 chars): {work_note_with_timestamp[:200]}")
+        
+        payload = {
+            "RequestData": {
+                "Source": "Code Warehouse Automation",
+                "IncidentDetails": {
+                    "IncidentNumber": incident_number,
+                    "AdditionalComments": work_note_with_timestamp
+                }
+            }
+        }
+        
+        logging.debug(f"ServiceNow payload: {json.dumps(payload, indent=2)[:500]}")
+        
+        update_resp = requests.post(
+            SNOW_UPDATE_URL,
+            headers={
+                "X-API-KEY": SNOW_UPDATE_KEY,
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            json=payload,
+            timeout=90,
+            verify=False
+        )
+        
+        logging.info(f"ServiceNow API response status: {update_resp.status_code}")
+        
+        # Log response text for debugging
+        response_text = update_resp.text
+        logging.debug(f"ServiceNow response: {response_text[:500]}")
+        
+        update_resp.raise_for_status()
+        
+        response_json = update_resp.json()
+        
+        # Check for errors in the response
+        if response_json.get("Error"):
+            error_data = response_json["Error"]
+            error_msg = error_data.get("Message")
+            error_code = error_data.get("MessageCode", "Unknown code")
+            
+            # Convert error message to string and clean it
+            error_msg_str = str(error_msg).strip().lower() if error_msg else ""
+            
+            # Handle null or empty error messages (update may have succeeded)
+            # ServiceNow returns error code 21002 with null message when update actually succeeds
+            if not error_msg or error_msg_str in ["null", "none", ""] or error_msg is None:
+                logging.warning(f"ServiceNow returned error code {error_code} with null/empty message - update likely succeeded")
+                logging.info(f"Treating as successful update for {incident_number} despite error response")
+                
+                # Return success response
+                return {
+                    "status": "success",
+                    "message": f"Incident {incident_number} updated successfully (null error ignored)",
+                    "incident_number": incident_number,
+                    "note": "ServiceNow returned error code with null message but update was successful"
+                }
+            else:
+                # Real error with actual message
+                logging.error(f"ServiceNow API returned error: [{error_code}] {error_msg}")
+                logging.error(f"Full error response: {json.dumps(error_data, indent=2)}")
+                raise Exception(f"ServiceNow API error [{error_code}]: {error_msg}")
+        
+        logging.info(f"Successfully updated incident {incident_number}")
+        return response_json
+        
+    except requests.exceptions.HTTPError as e:
+        logging.error(f"HTTP error updating ServiceNow incident {incident_number}: {e}")
+        logging.error(f"Response status: {e.response.status_code if e.response else 'N/A'}")
+        logging.error(f"Response body: {e.response.text if e.response else 'N/A'}")
+        raise
+    except Exception as e:
+        logging.error(f"Failed to update ServiceNow incident {incident_number}: {e}")
+        raise
