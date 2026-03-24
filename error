@@ -1,0 +1,201 @@
+2026-03-24T14:30:43.7296052Z Current runner version: '2.333.0'
+2026-03-24T14:30:43.7313073Z Runner name: 'dayprdbld10-a3'
+2026-03-24T14:30:43.7314587Z Runner group name: 'caresource-windows-default'
+2026-03-24T14:30:43.7316368Z Machine name: 'DAYPRDBLD10'
+2026-03-24T14:30:43.7322523Z ##[group]GITHUB_TOKEN Permissions
+2026-03-24T14:30:43.7326658Z Contents: read
+2026-03-24T14:30:43.7327609Z Metadata: read
+2026-03-24T14:30:43.7328545Z ##[endgroup]
+2026-03-24T14:30:43.7332039Z Secret source: Actions
+2026-03-24T14:30:43.7333882Z Prepare workflow directory
+2026-03-24T14:30:47.3876701Z Prepare all required actions
+2026-03-24T14:30:47.3941381Z Getting action download info
+2026-03-24T14:30:47.7112372Z Download action repository 'jfrog/setup-jfrog-cli@v4' (SHA:86dacb6974c66cc99e7651e1205f6581aaddba9a)
+2026-03-24T14:30:51.9578463Z Download action repository 'Azure/functions-action@v1' (SHA:02a16c5f3a5707fa97fca56c202cc2ef6cc7dccb)
+2026-03-24T14:32:31.7422435Z Uses: CareSourceIT/ClinAuto-Clinical.Support.Services.automation/.github/workflows/deploy.yml@refs/heads/feature/auto_az_function (47359cddcf50c551d4ebd2e8fc35daf70c45c8d7)
+2026-03-24T14:32:31.7427812Z ##[group] Inputs
+2026-03-24T14:32:31.7428235Z   ENVIRONMENT: INT
+2026-03-24T14:32:31.7429605Z   JF_FUNCTION_APP_ARTIFACT_PATH: clinicalsys-zip-umga-np-deploy/ClinAuto-Clinical.Support.Services.automation/0.1.0-auto-az-function.83/ClinAuto-Clinical.Support.Services.automation-Functionapp-0.1.0-auto-az-function.83.zip
+2026-03-24T14:32:31.7431048Z   BUILD_NUMBER: 0.1.0-auto-az-function.83
+2026-03-24T14:32:31.7431435Z   SLOT_NAME: 
+2026-03-24T14:32:31.7431711Z ##[endgroup]
+2026-03-24T14:32:31.7432034Z Complete job name: INT-deploy / Deploy to INT
+2026-03-24T14:32:31.9357934Z ##[group]Run $FA_downloadDir = Join-Path -Path "E:\github\a3\_work\ClinAuto-Clinical.Support.Services.automation\ClinAuto-Clinical.Support.Services.automation" -ChildPath "FunctionAppArtifact_0.1.0-auto-az-function.83"
+2026-03-24T14:32:31.9360912Z [36;1m$FA_downloadDir = Join-Path -Path "E:\github\a3\_work\ClinAuto-Clinical.Support.Services.automation\ClinAuto-Clinical.Support.Services.automation" -ChildPath "FunctionAppArtifact_0.1.0-auto-az-function.83"[0m
+2026-03-24T14:32:31.9362437Z [36;1mecho "FUNCTION_APP_ARTIFACT_FOLDER=$FA_downloadDir" >> $env:GITHUB_ENV[0m
+2026-03-24T14:32:31.9363327Z [36;1mif (!(Test-Path $FA_downloadDir)) {[0m
+2026-03-24T14:32:31.9363874Z [36;1mNew-Item -Path $FA_downloadDir -ItemType Directory | Out-Null[0m
+2026-03-24T14:32:31.9364422Z [36;1m}[0m
+2026-03-24T14:32:31.9474599Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-03-24T14:32:31.9475719Z env:
+2026-03-24T14:32:31.9476265Z   JF_SAAS_URL: https://caresource.pe.jfrog.io
+2026-03-24T14:32:31.9477266Z   JFROG_CLI_HOME_DIR: E:\github\a3\_work\ClinAuto-Clinical.Support.Services.automation\ClinAuto-Clinical.Support.Services.automation\jfrog
+2026-03-24T14:32:31.9478171Z   JF_PROJECTID: clinicalsys
+2026-03-24T14:32:31.9479547Z   JF_FUNCTION_APP_ARTIFACT_PATH: clinicalsys-zip-umga-np-deploy/ClinAuto-Clinical.Support.Services.automation/0.1.0-auto-az-function.83/ClinAuto-Clinical.Support.Services.automation-Functionapp-0.1.0-auto-az-function.83.zip
+2026-03-24T14:32:31.9481203Z ##[endgroup]
+2026-03-24T14:32:33.0399898Z ##[group]Run jfrog/setup-jfrog-cli@v4
+2026-03-24T14:32:33.0400497Z with:
+2026-03-24T14:32:33.0401455Z   oidc-provider-name: ***
+2026-03-24T14:32:33.0401810Z   disable-auto-build-publish: true
+2026-03-24T14:32:33.0402186Z   version: 2.91.0
+2026-03-24T14:32:33.0402485Z   disable-job-summary: false
+2026-03-24T14:32:33.0402858Z   disable-auto-evidence-collection: false
+2026-03-24T14:32:33.0403228Z env:
+2026-03-24T14:32:33.0403542Z   JF_SAAS_URL: https://caresource.pe.jfrog.io
+2026-03-24T14:32:33.0404474Z   JFROG_CLI_HOME_DIR: E:\github\a3\_work\ClinAuto-Clinical.Support.Services.automation\ClinAuto-Clinical.Support.Services.automation\jfrog
+2026-03-24T14:32:33.0405411Z   JF_PROJECTID: clinicalsys
+2026-03-24T14:32:33.0406976Z   JF_FUNCTION_APP_ARTIFACT_PATH: clinicalsys-zip-umga-np-deploy/ClinAuto-Clinical.Support.Services.automation/0.1.0-auto-az-function.83/ClinAuto-Clinical.Support.Services.automation-Functionapp-0.1.0-auto-az-function.83.zip
+2026-03-24T14:32:33.0413219Z   FUNCTION_APP_ARTIFACT_FOLDER: E:\github\a3\_work\ClinAuto-Clinical.Support.Services.automation\ClinAuto-Clinical.Support.Services.automation\FunctionAppArtifact_0.1.0-auto-az-function.83
+2026-03-24T14:32:33.0414375Z   JF_URL: https://caresource.pe.jfrog.io
+2026-03-24T14:32:33.0414729Z ##[endgroup]
+2026-03-24T14:32:33.5821357Z ##[group]Setup JFrog CLI
+2026-03-24T14:32:33.6073684Z Found JFrog CLI in cache. No need to download
+2026-03-24T14:32:33.6381642Z (node:10136) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+2026-03-24T14:32:33.6383333Z (Use `node --trace-warnings ...` to show where the warning was created)
+2026-03-24T14:32:34.5338069Z [command]E:\github\a3\_work\_tool\jf.exe\2.91.0\x64\jf.exe config add setup-jfrog-cli-server --url https://caresource.pe.jfrog.io --interactive=false --overwrite=true --access-token ***
+2026-03-24T14:32:34.8308850Z ##[endgroup]
+2026-03-24T14:32:34.9237460Z ##[group]Run jf rt dl --project "clinicalsys" "clinicalsys-zip-umga-np-deploy/ClinAuto-Clinical.Support.Services.automation/0.1.0-auto-az-function.83/ClinAuto-Clinical.Support.Services.automation-Functionapp-0.1.0-auto-az-function.83.zip" "E:\github\a3\_work\ClinAuto-Clinical.Support.Services.automation\ClinAuto-Clinical.Support.Services.automation\FunctionAppArtifact_0.1.0-auto-az-function.83\" --flat=true
+2026-03-24T14:32:34.9242303Z [36;1mjf rt dl --project "clinicalsys" "clinicalsys-zip-umga-np-deploy/ClinAuto-Clinical.Support.Services.automation/0.1.0-auto-az-function.83/ClinAuto-Clinical.Support.Services.automation-Functionapp-0.1.0-auto-az-function.83.zip" "E:\github\a3\_work\ClinAuto-Clinical.Support.Services.automation\ClinAuto-Clinical.Support.Services.automation\FunctionAppArtifact_0.1.0-auto-az-function.83\" --flat=true[0m
+2026-03-24T14:32:34.9341789Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-03-24T14:32:34.9342332Z env:
+2026-03-24T14:32:34.9342752Z   JF_SAAS_URL: https://caresource.pe.jfrog.io
+2026-03-24T14:32:34.9343681Z   JFROG_CLI_HOME_DIR: E:\github\a3\_work\ClinAuto-Clinical.Support.Services.automation\ClinAuto-Clinical.Support.Services.automation\jfrog
+2026-03-24T14:32:34.9344577Z   JF_PROJECTID: clinicalsys
+2026-03-24T14:32:34.9345950Z   JF_FUNCTION_APP_ARTIFACT_PATH: clinicalsys-zip-umga-np-deploy/ClinAuto-Clinical.Support.Services.automation/0.1.0-auto-az-function.83/ClinAuto-Clinical.Support.Services.automation-Functionapp-0.1.0-auto-az-function.83.zip
+2026-03-24T14:32:34.9348233Z   FUNCTION_APP_ARTIFACT_FOLDER: E:\github\a3\_work\ClinAuto-Clinical.Support.Services.automation\ClinAuto-Clinical.Support.Services.automation\FunctionAppArtifact_0.1.0-auto-az-function.83
+2026-03-24T14:32:34.9349769Z   JFROG_CLI_ENV_EXCLUDE: *password*;*secret*;*key*;*token*;*auth*;JF_ARTIFACTORY_*;JF_ENV_*;JF_URL;JF_USER;JF_PASSWORD;JF_ACCESS_TOKEN
+2026-03-24T14:32:34.9350542Z   JFROG_CLI_OFFER_CONFIG: false
+2026-03-24T14:32:34.9350899Z   JFROG_CLI_AVOID_NEW_VERSION_WARNING: true
+2026-03-24T14:32:34.9351545Z   JFROG_CLI_SOURCECODE_REPOSITORY: CareSourceIT/ClinAuto-Clinical.Support.Services.automation
+2026-03-24T14:32:34.9352280Z   JFROG_CLI_CI_JOB_ID: Clinical.Automation CI Build
+2026-03-24T14:32:34.9352701Z   JFROG_CLI_CI_RUN_ID: 23494536564
+2026-03-24T14:32:34.9353033Z   JFROG_CLI_GITHUB_TOKEN: 
+2026-03-24T14:32:34.9353459Z   JFROG_CLI_CI_VCS_REVISION: 47359cddcf50c551d4ebd2e8fc35daf70c45c8d7
+2026-03-24T14:32:34.9353980Z   JFROG_CLI_CI_BRANCH: feature/auto_az_function
+2026-03-24T14:32:34.9354684Z   JFROG_CLI_CI_VCS_URL: https://github.com/CareSourceIT/ClinAuto-Clinical.Support.Services.automation
+2026-03-24T14:32:34.9355423Z   JFROG_CLI_BUILD_NAME: Clinical.Automation CI Build
+2026-03-24T14:32:34.9355816Z   JFROG_CLI_BUILD_NUMBER: 101
+2026-03-24T14:32:34.9358283Z   JFROG_CLI_BUILD_URL: https://github.com/CareSourceIT/ClinAuto-Clinical.Support.Services.automation/actions/runs/23494536564
+2026-03-24T14:32:34.9359362Z   JFROG_CLI_USER_AGENT: setup-jfrog-cli-github-action/4.10.0
+2026-03-24T14:32:34.9359944Z   JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR: E:\github\a3\_work\_temp
+2026-03-24T14:32:34.9360501Z   JFROG_CLI_USAGE_GH_TOKEN_FOR_CODE_SCANNING_ALERTS_PROVIDED: 
+2026-03-24T14:32:34.9361004Z   SETUP_JFROG_CLI_SERVER_IDS: setup-jfrog-cli-server
+2026-03-24T14:32:34.9361560Z ##[endgroup]
+2026-03-24T14:32:36.0583682Z 10:32:36 [Info] [Thread 2] Downloading "clinicalsys-zip-umga-np-deploy/ClinAuto-Clinical.Support.Services.automation/0.1.0-auto-az-function.83/ClinAuto-Clinical.Support.Services.automation-Functionapp-0.1.0-auto-az-function.83.zip" to "E:\\github\\a3\\_work\\ClinAuto-Clinical.Support.Services.automation\\ClinAuto-Clinical.Support.Services.automation\\FunctionAppArtifact_0.1.0-auto-az-function.83\\ClinAuto-Clinical.Support.Services.automation-Functionapp-0.1.0-auto-az-function.83.zip"
+2026-03-24T14:32:36.4609919Z 10:32:36 [Info] [Thread 2] [1]: 206 ...
+2026-03-24T14:32:36.5331578Z 10:32:36 [Info] [Thread 2] [2]: 206 ...
+2026-03-24T14:32:36.6164848Z 10:32:36 [Info] [Thread 2] [0]: 206 ...
+2026-03-24T14:32:43.0195509Z 10:32:43 [Info] [Thread 2] Done downloading.
+2026-03-24T14:32:43.0723066Z {
+2026-03-24T14:32:43.0723562Z   "status": "success",
+2026-03-24T14:32:43.0724057Z   "totals": {
+2026-03-24T14:32:43.0725343Z     "success": 1,
+2026-03-24T14:32:43.0725907Z     "failure": 0
+2026-03-24T14:32:43.0726371Z   }
+2026-03-24T14:32:43.0726737Z }
+2026-03-24T14:32:43.6047941Z ##[group]Run $function_app_path = Get-ChildItem -Path "$env:FUNCTION_APP_ARTIFACT_FOLDER" -Recurse -Filter *.zip | Select-Object -ExpandProperty FullName -First 1
+2026-03-24T14:32:43.6050439Z [36;1m$function_app_path = Get-ChildItem -Path "$env:FUNCTION_APP_ARTIFACT_FOLDER" -Recurse -Filter *.zip | Select-Object -ExpandProperty FullName -First 1[0m
+2026-03-24T14:32:43.6051403Z [36;1mif ($null -eq $function_app_path) {[0m
+2026-03-24T14:32:43.6051991Z [36;1m  Write-Error "No function app zip file found."[0m
+2026-03-24T14:32:43.6052666Z [36;1m  exit 1[0m
+2026-03-24T14:32:43.6053057Z [36;1m}[0m
+2026-03-24T14:32:43.6053696Z [36;1mecho "FUNCTION_APP_FILE_PATH=$function_app_path" >> $env:GITHUB_OUTPUT[0m
+2026-03-24T14:32:43.6145295Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-03-24T14:32:43.6145769Z env:
+2026-03-24T14:32:43.6146104Z   JF_SAAS_URL: https://caresource.pe.jfrog.io
+2026-03-24T14:32:43.6147119Z   JFROG_CLI_HOME_DIR: E:\github\a3\_work\ClinAuto-Clinical.Support.Services.automation\ClinAuto-Clinical.Support.Services.automation\jfrog
+2026-03-24T14:32:43.6147981Z   JF_PROJECTID: clinicalsys
+2026-03-24T14:32:43.6149414Z   JF_FUNCTION_APP_ARTIFACT_PATH: clinicalsys-zip-umga-np-deploy/ClinAuto-Clinical.Support.Services.automation/0.1.0-auto-az-function.83/ClinAuto-Clinical.Support.Services.automation-Functionapp-0.1.0-auto-az-function.83.zip
+2026-03-24T14:32:43.6151749Z   FUNCTION_APP_ARTIFACT_FOLDER: E:\github\a3\_work\ClinAuto-Clinical.Support.Services.automation\ClinAuto-Clinical.Support.Services.automation\FunctionAppArtifact_0.1.0-auto-az-function.83
+2026-03-24T14:32:43.6153248Z   JFROG_CLI_ENV_EXCLUDE: *password*;*secret*;*key*;*token*;*auth*;JF_ARTIFACTORY_*;JF_ENV_*;JF_URL;JF_USER;JF_PASSWORD;JF_ACCESS_TOKEN
+2026-03-24T14:32:43.6153989Z   JFROG_CLI_OFFER_CONFIG: false
+2026-03-24T14:32:43.6154368Z   JFROG_CLI_AVOID_NEW_VERSION_WARNING: true
+2026-03-24T14:32:43.6155101Z   JFROG_CLI_SOURCECODE_REPOSITORY: CareSourceIT/ClinAuto-Clinical.Support.Services.automation
+2026-03-24T14:32:43.6155790Z   JFROG_CLI_CI_JOB_ID: Clinical.Automation CI Build
+2026-03-24T14:32:43.6156341Z   JFROG_CLI_CI_RUN_ID: 23494536564
+2026-03-24T14:32:43.6156682Z   JFROG_CLI_GITHUB_TOKEN: 
+2026-03-24T14:32:43.6157100Z   JFROG_CLI_CI_VCS_REVISION: 47359cddcf50c551d4ebd2e8fc35daf70c45c8d7
+2026-03-24T14:32:43.6157604Z   JFROG_CLI_CI_BRANCH: feature/auto_az_function
+2026-03-24T14:32:43.6159064Z   JFROG_CLI_CI_VCS_URL: https://github.com/CareSourceIT/ClinAuto-Clinical.Support.Services.automation
+2026-03-24T14:32:43.6159840Z   JFROG_CLI_BUILD_NAME: Clinical.Automation CI Build
+2026-03-24T14:32:43.6160244Z   JFROG_CLI_BUILD_NUMBER: 101
+2026-03-24T14:32:43.6161221Z   JFROG_CLI_BUILD_URL: https://github.com/CareSourceIT/ClinAuto-Clinical.Support.Services.automation/actions/runs/23494536564
+2026-03-24T14:32:43.6162100Z   JFROG_CLI_USER_AGENT: setup-jfrog-cli-github-action/4.10.0
+2026-03-24T14:32:43.6162663Z   JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR: E:\github\a3\_work\_temp
+2026-03-24T14:32:43.6163196Z   JFROG_CLI_USAGE_GH_TOKEN_FOR_CODE_SCANNING_ALERTS_PROVIDED: 
+2026-03-24T14:32:43.6163729Z   SETUP_JFROG_CLI_SERVER_IDS: setup-jfrog-cli-server
+2026-03-24T14:32:43.6164231Z ##[endgroup]
+2026-03-24T14:32:44.6187419Z ##[group]Run Azure/functions-action@v1
+2026-03-24T14:32:44.6188069Z with:
+2026-03-24T14:32:44.6188512Z   app-name: func-clinical-prodautomation-eastus-int-01 - Web Deploy
+2026-03-24T14:32:44.6199846Z   publish-profile: ***
+2026-03-24T14:32:44.6201404Z   package: E:\github\a3\_work\ClinAuto-Clinical.Support.Services.automation\ClinAuto-Clinical.Support.Services.automation\FunctionAppArtifact_0.1.0-auto-az-function.83\ClinAuto-Clinical.Support.Services.automation-Functionapp-0.1.0-auto-az-function.83.zip
+2026-03-24T14:32:44.6203033Z   scm-do-build-during-deployment: false
+2026-03-24T14:32:44.6203417Z   enable-oryx-build: false
+2026-03-24T14:32:44.6203728Z   respect-pom-xml: false
+2026-03-24T14:32:44.6204036Z   respect-funcignore: false
+2026-03-24T14:32:44.6204565Z   remote-build: false
+2026-03-24T14:32:44.6204847Z env:
+2026-03-24T14:32:44.6205143Z   JF_SAAS_URL: https://caresource.pe.jfrog.io
+2026-03-24T14:32:44.6206160Z   JFROG_CLI_HOME_DIR: E:\github\a3\_work\ClinAuto-Clinical.Support.Services.automation\ClinAuto-Clinical.Support.Services.automation\jfrog
+2026-03-24T14:32:44.6207050Z   JF_PROJECTID: clinicalsys
+2026-03-24T14:32:44.6208512Z   JF_FUNCTION_APP_ARTIFACT_PATH: clinicalsys-zip-umga-np-deploy/ClinAuto-Clinical.Support.Services.automation/0.1.0-auto-az-function.83/ClinAuto-Clinical.Support.Services.automation-Functionapp-0.1.0-auto-az-function.83.zip
+2026-03-24T14:32:44.6210679Z   FUNCTION_APP_ARTIFACT_FOLDER: E:\github\a3\_work\ClinAuto-Clinical.Support.Services.automation\ClinAuto-Clinical.Support.Services.automation\FunctionAppArtifact_0.1.0-auto-az-function.83
+2026-03-24T14:32:44.6212188Z   JFROG_CLI_ENV_EXCLUDE: *password*;*secret*;*key*;*token*;*auth*;JF_ARTIFACTORY_*;JF_ENV_*;JF_URL;JF_USER;JF_PASSWORD;JF_ACCESS_TOKEN
+2026-03-24T14:32:44.6212944Z   JFROG_CLI_OFFER_CONFIG: false
+2026-03-24T14:32:44.6213302Z   JFROG_CLI_AVOID_NEW_VERSION_WARNING: true
+2026-03-24T14:32:44.6213982Z   JFROG_CLI_SOURCECODE_REPOSITORY: CareSourceIT/ClinAuto-Clinical.Support.Services.automation
+2026-03-24T14:32:44.6214989Z   JFROG_CLI_CI_JOB_ID: Clinical.Automation CI Build
+2026-03-24T14:32:44.6215437Z   JFROG_CLI_CI_RUN_ID: 23494536564
+2026-03-24T14:32:44.6215798Z   JFROG_CLI_GITHUB_TOKEN: 
+2026-03-24T14:32:44.6216243Z   JFROG_CLI_CI_VCS_REVISION: 47359cddcf50c551d4ebd2e8fc35daf70c45c8d7
+2026-03-24T14:32:44.6216773Z   JFROG_CLI_CI_BRANCH: feature/auto_az_function
+2026-03-24T14:32:44.6217458Z   JFROG_CLI_CI_VCS_URL: https://github.com/CareSourceIT/ClinAuto-Clinical.Support.Services.automation
+2026-03-24T14:32:44.6218185Z   JFROG_CLI_BUILD_NAME: Clinical.Automation CI Build
+2026-03-24T14:32:44.6218592Z   JFROG_CLI_BUILD_NUMBER: 101
+2026-03-24T14:32:44.6219341Z   JFROG_CLI_BUILD_URL: https://github.com/CareSourceIT/ClinAuto-Clinical.Support.Services.automation/actions/runs/23494536564
+2026-03-24T14:32:44.6220243Z   JFROG_CLI_USER_AGENT: setup-jfrog-cli-github-action/4.10.0
+2026-03-24T14:32:44.6220781Z   JFROG_CLI_COMMAND_SUMMARY_OUTPUT_DIR: E:\github\a3\_work\_temp
+2026-03-24T14:32:44.6221342Z   JFROG_CLI_USAGE_GH_TOKEN_FOR_CODE_SCANNING_ALERTS_PROVIDED: 
+2026-03-24T14:32:44.6221822Z   SETUP_JFROG_CLI_SERVER_IDS: setup-jfrog-cli-server
+2026-03-24T14:32:44.6223482Z ##[endgroup]
+2026-03-24T14:32:46.0688300Z Successfully parsed SCM credential from publish-profile format.
+2026-03-24T14:32:46.0703609Z Using SCM credential for authentication, GitHub Action will not perform resource validation.
+2026-03-24T14:32:46.0878091Z (node:6016) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+2026-03-24T14:32:46.0879322Z (Use `node --trace-warnings ...` to show where the warning was created)
+2026-03-24T14:32:47.1478798Z Successfully acquired app settings from function app (with SCM credential)!
+2026-03-24T14:32:47.1497933Z Will directly deploy E:\github\a3\_work\ClinAuto-Clinical.Support.Services.automation\ClinAuto-Clinical.Support.Services.automation\FunctionAppArtifact_0.1.0-auto-az-function.83\ClinAuto-Clinical.Support.Services.automation-Functionapp-0.1.0-auto-az-function.83.zip as function app content.
+2026-03-24T14:32:47.1500612Z Will use Kudu https://<scmsite>/api/zipdeploy to deploy since publish-profile is detected.
+2026-03-24T14:32:47.3025363Z Setting SCM_DO_BUILD_DURING_DEPLOYMENT in Kudu container to false
+2026-03-24T14:32:47.3026651Z Update using context.kuduService.updateAppSettingViaKudu
+2026-03-24T14:32:47.9628951Z Response with status code 204
+2026-03-24T14:32:53.2491167Z App setting SCM_DO_BUILD_DURING_DEPLOYMENT propagated to Kudu container
+2026-03-24T14:32:53.2496567Z Setting ENABLE_ORYX_BUILD in Kudu container to false
+2026-03-24T14:32:53.2497561Z Update using context.kuduService.updateAppSettingViaKudu
+2026-03-24T14:32:53.8960602Z Response with status code 204
+2026-03-24T14:32:59.2204235Z App setting ENABLE_ORYX_BUILD propagated to Kudu container
+2026-03-24T14:32:59.2205122Z Package deployment using ZIP Deploy initiated.
+2026-03-24T14:33:27.8038992Z Deploy logs can be viewed at https://func-clinical-prodautomation-eastus-int-01.scm.azurewebsites.net/api/deployments/56eb24b6-c23b-4ae1-a93b-8ed2a84b06e4/log
+2026-03-24T14:33:27.8040154Z Successfully deployed web package to App Service.
+2026-03-24T14:33:28.1323415Z Restoring SCM_DO_BUILD_DURING_DEPLOYMENT in Kudu container to false
+2026-03-24T14:33:28.6756200Z Response with status code 204
+2026-03-24T14:33:28.6756721Z Restoring ENABLE_ORYX_BUILD in Kudu container to false
+2026-03-24T14:33:29.3884727Z Response with status code 204
+2026-03-24T14:33:29.4982969Z Post job cleanup.
+2026-03-24T14:33:29.9648273Z ##[group]Checking connection to JFrog Artifactory
+2026-03-24T14:33:30.0548096Z [command]E:\github\a3\_work\_tool\jf.exe\2.91.0\x64\jf.exe rt ping
+2026-03-24T14:33:30.5603201Z OK
+2026-03-24T14:33:30.7477204Z ##[endgroup]
+2026-03-24T14:33:30.7477883Z Auto build info publish is disabled or jf rt ping failed. Skipping auto build info collection and publishing
+2026-03-24T14:33:30.7478805Z ##[group]Collecting evidence
+2026-03-24T14:33:30.7485513Z No attestation paths file found. Skipping evidence creation. Searched for: E:\github\a3\_work\_temp\created_attestation_paths.txt. Error: Error: ENOENT: no such file or directory, access 'E:\github\a3\_work\_temp\created_attestation_paths.txt'
+2026-03-24T14:33:30.7487133Z ##[endgroup]
+2026-03-24T14:33:30.7487595Z ##[group]Generating Job Summary
+2026-03-24T14:33:30.8156057Z [command]E:\github\a3\_work\_tool\jf.exe\2.91.0\x64\jf.exe generate-summary-markdown
+2026-03-24T14:33:31.5904460Z No code scanning sarif file was found.
+2026-03-24T14:33:31.5941679Z ##[endgroup]
+2026-03-24T14:33:31.5942248Z ##[group]Cleanup JFrog CLI servers configuration
+2026-03-24T14:33:31.5943486Z The value of custom is: 'undefined'
+2026-03-24T14:33:31.6599275Z [command]E:\github\a3\_work\_tool\jf.exe\2.91.0\x64\jf.exe c rm setup-jfrog-cli-server --quiet
+2026-03-24T14:33:31.9311514Z ##[endgroup]
+2026-03-24T14:33:31.9649807Z Cleaning up orphan processes
